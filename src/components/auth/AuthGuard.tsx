@@ -12,27 +12,27 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [hasRedirected, setHasRedirected] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && pathname !== "/login") {
-      setHasRedirected(true);
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !isLoading && !isAuthenticated && pathname !== "/login") {
       router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
     }
-  }, [isAuthenticated, isLoading, router, pathname]);
+  }, [isAuthenticated, isLoading, router, pathname, mounted]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader message="Verifying session..." />
-      </div>
-    );
+  // Before hydration, render null smoothly to prevent flash
+  if (!mounted || isLoading) {
+    return null;
   }
 
   if (!isAuthenticated && pathname !== "/login") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 text-center">
-        <Loader message="Redirecting to sign-in portal..." />
+        <Loader message="Redirecting to login portal..." />
         <div className="mt-4">
           <Link href="/login">
             <Button variant="primary" leftIcon={<LogIn className="w-4 h-4" />}>

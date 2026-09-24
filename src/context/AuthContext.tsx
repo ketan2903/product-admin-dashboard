@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { User, LoginCredentials } from "@/types/auth";
@@ -17,12 +17,30 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  // Read initial token synchronously if available in browser
+  const [token, setToken] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("auth_token");
+    }
+    return null;
+  });
+
+  const [user, setUser] = useState<User | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const storedUser = localStorage.getItem("auth_user");
+        return storedUser ? JSON.parse(storedUser) : null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
+
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const router = useRouter();
 
-  // Load user from localStorage on mount
+  // Validate session on mount
   useEffect(() => {
     try {
       const storedToken = localStorage.getItem("auth_token");
@@ -33,11 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(JSON.parse(storedUser));
       }
     } catch (e) {
-      console.error("Failed to load auth state from localStorage", e);
-      localStorage.removeItem("auth_token");
-      localStorage.removeItem("auth_user");
-    } finally {
-      setIsLoading(false);
+      console.error("Failed to restore session from localStorage", e);
     }
   }, []);
 
